@@ -1,0 +1,72 @@
+---
+title: "Predicting the manner of exercises - Peer Graded Assignment ML"
+author: "G Raman Kumar"
+date: "7th-Feb-2024"
+output: html_document
+---
+
+```{r, setup}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+```
+
+## Introduction
+The goal of this assignment is to use data from accelerometers on the belt,
+forearm, arm, and dumbell of 6 participants. They were asked to perform barbell
+lifts correctly and incorrectly in 5 different ways. And predict the manner in
+which they did the exercise. Train and test datasets provided for download
+from the links mentioned on the Coursera project page, are mentioned below.
+
+```{r, train_test}
+trainUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+trainFilename <- "pml-traing.csv"
+testFilename <- "pml-testing.csv"
+# downloading and reading the train and test files
+download.file(trainUrl, trainFilename)
+training <- read.csv(trainFilename)
+
+download.file(testUrl, testFilename)
+testing <- read.csv(testFilename)
+```
+
+Decided to use only integer or numeric columns for prediction. Assigned training
+data set with only numeric class to another data set. Summarising with summary
+function showed many columns with more than nineteen thousand NAs. Decided to
+drop all variables with more than nineteen thousand NAs.  
+
+```{r, characters_NAs}
+# indexes of all the character columns
+char <- which(sapply(training, class)=="character")
+
+# dropping all character columns
+workingTrain <- training[,-char]
+
+# determining column names with more than 19000 NAs
+na_colnames <- names(workingTrain)[colSums(is.na(workingTrain))>19000]
+
+# Finding the indexes of the above NA columns in the workingTrain dataset
+col_indexes <- which(!names(workingTrain) %in% na_colnames)
+
+# Dropping all the columns with NAs greater than 19000
+workingTrain <- workingTrain[, col_indexes]
+
+# Keeping only those columns in testing which are there in workingTrain to
+# keep both the datasets with same variables.
+workingTest <- testing[,col_indexes]
+
+# Attaching the outcome variable "classe" to workingTrain dataset
+workingTrain$classe <- training$classe
+
+# Attaching the "problem_id" variable to the workingTest dataset which indicates
+# the type of test case each observation is.
+workingTest$problem_id <- testing$problem_id
+```
+
+Working with the **caret** package.
+
+```{r, loading_library}
+library(caret)
+model1 <- train(classe ~ ., method = "rf", data = workingTrain,
+                trControl = trainControl(method = "repeatedcv", number = 5,
+                                         repeats = 2))
+```

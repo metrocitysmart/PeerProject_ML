@@ -5,7 +5,7 @@ date: "7th-Feb-2024"
 output: html_document
 ---
 
-```{r, setup}
+```{r, setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 ```
 
@@ -16,57 +16,90 @@ lifts correctly and incorrectly in 5 different ways. And predict the manner in
 which they did the exercise. Train and test datasets provided for download
 from the links mentioned on the Coursera project page, are mentioned below.
 
-```{r, train_test}
+```{r, downloading_train_test}
 trainUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
 testUrl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
 trainFilename <- "pml-traing.csv"
 testFilename <- "pml-testing.csv"
 # downloading and reading the train and test files
 download.file(trainUrl, trainFilename)
-training <- read.csv(trainFilename)
-
 download.file(testUrl, testFilename)
+```
+
+After downloading train and test files, read the files and loaded the datasets
+into the workspace. Training data set has 19622 observations and 160 variables,
+while the testing dataset has 20 observations and 160 variables.  
+
+```{r, reading_datasets}
+training <- read.csv(trainFilename)
+dim(training)
 testing <- read.csv(testFilename)
+dim(testing)
 ```
 
-Decided to use only integer or numeric columns for prediction. Assigned training
-data set with only numeric class to another data set. Summarising with summary
-function showed many columns with more than nineteen thousand NAs. Decided to
-drop all variables with more than nineteen thousand NAs.  
+## Pre-Process  
 
-```{r, characters_NAs}
-# indexes of all the character columns
-char <- which(sapply(training, class)=="character")
+To determine which columns had no variation in values so that those columns
+could be dropped, I loaded **caret** package for this purpose and used the
+function **nzv**. I obtained the column indexes for which there was no variation in values. Using the column indexes I dropped those columns.
+Next summarizing with summary function showed many columns with more than 
+nineteen thousand NAs. Decided to drop all variables with more than nineteen thousand NAs from the data set resulting from after dropping columns with zero variation operation.  
 
-# dropping all character columns
-workingTrain <- training[,-char]
-
-# determining column names with more than 19000 NAs
-na_colnames <- names(workingTrain)[colSums(is.na(workingTrain))>19000]
-
-# Finding the indexes of the above NA columns in the workingTrain dataset
-col_indexes <- which(!names(workingTrain) %in% na_colnames)
-
-# Dropping all the columns with NAs greater than 19000
-workingTrain <- workingTrain[, col_indexes]
-
-# Keeping only those columns in testing which are there in workingTrain to
-# keep both the datasets with same variables.
-workingTest <- testing[,col_indexes]
-
-# Attaching the outcome variable "classe" to workingTrain dataset
-workingTrain$classe <- training$classe
-
-# Attaching the "problem_id" variable to the workingTest dataset which indicates
-# the type of test case each observation is.
-workingTest$problem_id <- testing$problem_id
-```
-
-Working with the **caret** package.
-
-```{r, loading_library}
+```{r, noVariation_NAs}
+# columns indexes with zero variation and dropping those columns
 library(caret)
-model1 <- train(classe ~ ., method = "rf", data = workingTrain,
-                trControl = trainControl(method = "repeatedcv", number = 5,
-                                         repeats = 2))
+noVariation_col_indexes <- nzv(as.matrix(training))
+workingTrain <- training[,-noVariation_col_indexes]
+summary(workingTrain)
+
+# determining columns with more than 19000 NAs and dropping those columns
+na_col_indexes <- which(colSums(is.na(workingTrain))>19000)
+workingTrain <- workingTrain[,-na_col_indexes]
+
+# In order to keep the test set similar to the training set, dropped all those
+# columns which were dropped from the training set.  
+
+workingTest <- testing[,-noVariation_col_indexes]
+workingTest <- workingTest[,-na_col_indexes]
+```
+
+## Model training  
+From the data sets obtained after pre-processing above, I worked with the
+**caret** package created **train** and **validate** data sets. Used model stacking technique, with random forest and rpart classification models. In random forest I used repeated cross validation with 2 repeats of 3-fold cross validation for resampling. For **rpart** model, I used 4-fold cross validation as the resampling method. Also used **tuneLength** parameter for tuning.
+The random forest model took 5-6 minutes to run on my laptop. I took predictions on both the models, combined with **classe** variable of the **validate** set to create a new data set **pred_df**. Trained on this data set and predicted on this set. Both the individual models have an accuracy of one, and the stacked model using **gbm** also has accuracy one.
+I further took predictions on **workingTest** data set for both the models individually, combined these predictions into a data set **predT_combined**, and predicted on this data set as well using the combined model **comb_fit**. **predT_combined** are the predictions of 20 different test cases using the prediction model.
+I presume the out of sampling error to be the least or minimum if not zero. Below is the code for the entire model training section.
+
+```{r, model_training}
+set.seed(123)
+intrain <- createDataPartition(y=workingTrain$classe, p = 0.75, list = FALSE)
+train <- workingTrain[intrain,]
+validate <- workingTrain[-intrain,]
+
+ctrl <- trainControl(method = "repeatedcv", number = 3, repeats = 2)
+
+model1 <- train(classe ~ ., method = "rf", data = train, 
+                tuneLength = 5, trControl = ctrl)
+
+rpart_ctrl <- trainControl(method = "cv", number = 4)
+model2 <- train(classe ~ ., method = "rpart", data = train,
+                tuneLength = 5, trControl = ctrl)
+
+pred1 <- predict(model1, validate)
+pred2 <- predict(model2, validate)
+
+pred_df <- data.frame(predV1 = pred1, predV2 = pred2, classe = validate$classe)
+comb_fit <- train(classe ~ ., method = "gbm", data = pred_df, verbose = FALSE)
+
+predCombined <- predict(comb_fit, pred_df)
+
+# Errors on validate set
+confusionMatrix(pred1, factor(validate$classe))
+confusionMatrix(pred2, factor(validate$classe))
+confusionMatrix(predCombined, factor(validate$classe))
+
+predT1 <- predict(model1, workingTest)
+predT2 <- predict(model2, workingTest)
+predT_combined <- data.frame(predV1 = predT1, predV2 = predT2)
+combT_pred <- predict(comb_fit, predT_combined)
 ```

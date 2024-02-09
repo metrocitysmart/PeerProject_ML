@@ -398,216 +398,9 @@ operation.</p>
 library(caret)
 noVariation_col_indexes &lt;- nzv(as.matrix(training))
 workingTrain &lt;- training[,-noVariation_col_indexes]
-summary(workingTrain)</code></pre>
-<pre><code>##        X          user_name         raw_timestamp_part_1 raw_timestamp_part_2
-##  Min.   :    1   Length:19622       Min.   :1.322e+09    Min.   :   294      
-##  1st Qu.: 4906   Class :character   1st Qu.:1.323e+09    1st Qu.:252912      
-##  Median : 9812   Mode  :character   Median :1.323e+09    Median :496380      
-##  Mean   : 9812                      Mean   :1.323e+09    Mean   :500656      
-##  3rd Qu.:14717                      3rd Qu.:1.323e+09    3rd Qu.:751891      
-##  Max.   :19622                      Max.   :1.323e+09    Max.   :998801      
-##                                                                              
-##  cvtd_timestamp       num_window      roll_belt        pitch_belt      
-##  Length:19622       Min.   :  1.0   Min.   :-28.90   Min.   :-55.8000  
-##  Class :character   1st Qu.:222.0   1st Qu.:  1.10   1st Qu.:  1.7600  
-##  Mode  :character   Median :424.0   Median :113.00   Median :  5.2800  
-##                     Mean   :430.6   Mean   : 64.41   Mean   :  0.3053  
-##                     3rd Qu.:644.0   3rd Qu.:123.00   3rd Qu.: 14.9000  
-##                     Max.   :864.0   Max.   :162.00   Max.   : 60.3000  
-##                                                                        
-##     yaw_belt       total_accel_belt max_roll_belt     max_picth_belt 
-##  Min.   :-180.00   Min.   : 0.00    Min.   :-94.300   Min.   : 3.00  
-##  1st Qu.: -88.30   1st Qu.: 3.00    1st Qu.:-88.000   1st Qu.: 5.00  
-##  Median : -13.00   Median :17.00    Median : -5.100   Median :18.00  
-##  Mean   : -11.21   Mean   :11.31    Mean   : -6.667   Mean   :12.92  
-##  3rd Qu.:  12.90   3rd Qu.:18.00    3rd Qu.: 18.500   3rd Qu.:19.00  
-##  Max.   : 179.00   Max.   :29.00    Max.   :180.000   Max.   :30.00  
-##                                     NA&#39;s   :19216     NA&#39;s   :19216  
-##  min_roll_belt     min_pitch_belt  amplitude_roll_belt amplitude_pitch_belt
-##  Min.   :-180.00   Min.   : 0.00   Min.   :  0.000     Min.   : 0.000      
-##  1st Qu.: -88.40   1st Qu.: 3.00   1st Qu.:  0.300     1st Qu.: 1.000      
-##  Median :  -7.85   Median :16.00   Median :  1.000     Median : 1.000      
-##  Mean   : -10.44   Mean   :10.76   Mean   :  3.769     Mean   : 2.167      
-##  3rd Qu.:   9.05   3rd Qu.:17.00   3rd Qu.:  2.082     3rd Qu.: 2.000      
-##  Max.   : 173.00   Max.   :23.00   Max.   :360.000     Max.   :12.000      
-##  NA&#39;s   :19216     NA&#39;s   :19216   NA&#39;s   :19216       NA&#39;s   :19216       
-##  var_total_accel_belt avg_roll_belt    stddev_roll_belt var_roll_belt    
-##  Min.   : 0.000       Min.   :-27.40   Min.   : 0.000   Min.   :  0.000  
-##  1st Qu.: 0.100       1st Qu.:  1.10   1st Qu.: 0.200   1st Qu.:  0.000  
-##  Median : 0.200       Median :116.35   Median : 0.400   Median :  0.100  
-##  Mean   : 0.926       Mean   : 68.06   Mean   : 1.337   Mean   :  7.699  
-##  3rd Qu.: 0.300       3rd Qu.:123.38   3rd Qu.: 0.700   3rd Qu.:  0.500  
-##  Max.   :16.500       Max.   :157.40   Max.   :14.200   Max.   :200.700  
-##  NA&#39;s   :19216        NA&#39;s   :19216    NA&#39;s   :19216    NA&#39;s   :19216    
-##  avg_pitch_belt    stddev_pitch_belt var_pitch_belt    avg_yaw_belt     
-##  Min.   :-51.400   Min.   :0.000     Min.   : 0.000   Min.   :-138.300  
-##  1st Qu.:  2.025   1st Qu.:0.200     1st Qu.: 0.000   1st Qu.: -88.175  
-##  Median :  5.200   Median :0.400     Median : 0.100   Median :  -6.550  
-##  Mean   :  0.520   Mean   :0.603     Mean   : 0.766   Mean   :  -8.831  
-##  3rd Qu.: 15.775   3rd Qu.:0.700     3rd Qu.: 0.500   3rd Qu.:  14.125  
-##  Max.   : 59.700   Max.   :4.000     Max.   :16.200   Max.   : 173.500  
-##  NA&#39;s   :19216     NA&#39;s   :19216     NA&#39;s   :19216    NA&#39;s   :19216     
-##  stddev_yaw_belt    var_yaw_belt        gyros_belt_x        gyros_belt_y     
-##  Min.   :  0.000   Min.   :    0.000   Min.   :-1.040000   Min.   :-0.64000  
-##  1st Qu.:  0.100   1st Qu.:    0.010   1st Qu.:-0.030000   1st Qu.: 0.00000  
-##  Median :  0.300   Median :    0.090   Median : 0.030000   Median : 0.02000  
-##  Mean   :  1.341   Mean   :  107.487   Mean   :-0.005592   Mean   : 0.03959  
-##  3rd Qu.:  0.700   3rd Qu.:    0.475   3rd Qu.: 0.110000   3rd Qu.: 0.11000  
-##  Max.   :176.600   Max.   :31183.240   Max.   : 2.220000   Max.   : 0.64000  
-##  NA&#39;s   :19216     NA&#39;s   :19216                                             
-##   gyros_belt_z      accel_belt_x       accel_belt_y     accel_belt_z    
-##  Min.   :-1.4600   Min.   :-120.000   Min.   :-69.00   Min.   :-275.00  
-##  1st Qu.:-0.2000   1st Qu.: -21.000   1st Qu.:  3.00   1st Qu.:-162.00  
-##  Median :-0.1000   Median : -15.000   Median : 35.00   Median :-152.00  
-##  Mean   :-0.1305   Mean   :  -5.595   Mean   : 30.15   Mean   : -72.59  
-##  3rd Qu.:-0.0200   3rd Qu.:  -5.000   3rd Qu.: 61.00   3rd Qu.:  27.00  
-##  Max.   : 1.6200   Max.   :  85.000   Max.   :164.00   Max.   : 105.00  
-##                                                                         
-##  magnet_belt_x   magnet_belt_y   magnet_belt_z       roll_arm      
-##  Min.   :-52.0   Min.   :354.0   Min.   :-623.0   Min.   :-180.00  
-##  1st Qu.:  9.0   1st Qu.:581.0   1st Qu.:-375.0   1st Qu.: -31.77  
-##  Median : 35.0   Median :601.0   Median :-320.0   Median :   0.00  
-##  Mean   : 55.6   Mean   :593.7   Mean   :-345.5   Mean   :  17.83  
-##  3rd Qu.: 59.0   3rd Qu.:610.0   3rd Qu.:-306.0   3rd Qu.:  77.30  
-##  Max.   :485.0   Max.   :673.0   Max.   : 293.0   Max.   : 180.00  
-##                                                                    
-##    pitch_arm          yaw_arm          total_accel_arm var_accel_arm   
-##  Min.   :-88.800   Min.   :-180.0000   Min.   : 1.00   Min.   :  0.00  
-##  1st Qu.:-25.900   1st Qu.: -43.1000   1st Qu.:17.00   1st Qu.:  9.03  
-##  Median :  0.000   Median :   0.0000   Median :27.00   Median : 40.61  
-##  Mean   : -4.612   Mean   :  -0.6188   Mean   :25.51   Mean   : 53.23  
-##  3rd Qu.: 11.200   3rd Qu.:  45.8750   3rd Qu.:33.00   3rd Qu.: 75.62  
-##  Max.   : 88.500   Max.   : 180.0000   Max.   :66.00   Max.   :331.70  
-##                                                        NA&#39;s   :19216   
-##   gyros_arm_x        gyros_arm_y       gyros_arm_z       accel_arm_x     
-##  Min.   :-6.37000   Min.   :-3.4400   Min.   :-2.3300   Min.   :-404.00  
-##  1st Qu.:-1.33000   1st Qu.:-0.8000   1st Qu.:-0.0700   1st Qu.:-242.00  
-##  Median : 0.08000   Median :-0.2400   Median : 0.2300   Median : -44.00  
-##  Mean   : 0.04277   Mean   :-0.2571   Mean   : 0.2695   Mean   : -60.24  
-##  3rd Qu.: 1.57000   3rd Qu.: 0.1400   3rd Qu.: 0.7200   3rd Qu.:  84.00  
-##  Max.   : 4.87000   Max.   : 2.8400   Max.   : 3.0200   Max.   : 437.00  
-##                                                                          
-##   accel_arm_y      accel_arm_z       magnet_arm_x     magnet_arm_y   
-##  Min.   :-318.0   Min.   :-636.00   Min.   :-584.0   Min.   :-392.0  
-##  1st Qu.: -54.0   1st Qu.:-143.00   1st Qu.:-300.0   1st Qu.:  -9.0  
-##  Median :  14.0   Median : -47.00   Median : 289.0   Median : 202.0  
-##  Mean   :  32.6   Mean   : -71.25   Mean   : 191.7   Mean   : 156.6  
-##  3rd Qu.: 139.0   3rd Qu.:  23.00   3rd Qu.: 637.0   3rd Qu.: 323.0  
-##  Max.   : 308.0   Max.   : 292.00   Max.   : 782.0   Max.   : 583.0  
-##                                                                      
-##   magnet_arm_z    max_picth_arm       max_yaw_arm     min_yaw_arm   
-##  Min.   :-597.0   Min.   :-173.000   Min.   : 4.00   Min.   : 1.00  
-##  1st Qu.: 131.2   1st Qu.:  -1.975   1st Qu.:29.00   1st Qu.: 8.00  
-##  Median : 444.0   Median :  23.250   Median :34.00   Median :13.00  
-##  Mean   : 306.5   Mean   :  35.751   Mean   :35.46   Mean   :14.66  
-##  3rd Qu.: 545.0   3rd Qu.:  95.975   3rd Qu.:41.00   3rd Qu.:19.00  
-##  Max.   : 694.0   Max.   : 180.000   Max.   :65.00   Max.   :38.00  
-##                   NA&#39;s   :19216      NA&#39;s   :19216   NA&#39;s   :19216  
-##  amplitude_yaw_arm roll_dumbbell     pitch_dumbbell     yaw_dumbbell     
-##  Min.   : 0.00     Min.   :-153.71   Min.   :-149.59   Min.   :-150.871  
-##  1st Qu.:13.00     1st Qu.: -18.49   1st Qu.: -40.89   1st Qu.: -77.644  
-##  Median :22.00     Median :  48.17   Median : -20.96   Median :  -3.324  
-##  Mean   :20.79     Mean   :  23.84   Mean   : -10.78   Mean   :   1.674  
-##  3rd Qu.:28.75     3rd Qu.:  67.61   3rd Qu.:  17.50   3rd Qu.:  79.643  
-##  Max.   :52.00     Max.   : 153.55   Max.   : 149.40   Max.   : 154.952  
-##  NA&#39;s   :19216                                                           
-##  max_roll_dumbbell max_picth_dumbbell min_roll_dumbbell min_pitch_dumbbell
-##  Min.   :-70.10    Min.   :-112.90    Min.   :-149.60   Min.   :-147.00   
-##  1st Qu.:-27.15    1st Qu.: -66.70    1st Qu.: -59.67   1st Qu.: -91.80   
-##  Median : 14.85    Median :  40.05    Median : -43.55   Median : -66.15   
-##  Mean   : 13.76    Mean   :  32.75    Mean   : -41.24   Mean   : -33.18   
-##  3rd Qu.: 50.58    3rd Qu.: 133.22    3rd Qu.: -25.20   3rd Qu.:  21.20   
-##  Max.   :137.00    Max.   : 155.00    Max.   :  73.20   Max.   : 120.90   
-##  NA&#39;s   :19216     NA&#39;s   :19216      NA&#39;s   :19216     NA&#39;s   :19216     
-##  amplitude_roll_dumbbell amplitude_pitch_dumbbell total_accel_dumbbell
-##  Min.   :  0.00          Min.   :  0.00           Min.   : 0.00       
-##  1st Qu.: 14.97          1st Qu.: 17.06           1st Qu.: 4.00       
-##  Median : 35.05          Median : 41.73           Median :10.00       
-##  Mean   : 55.00          Mean   : 65.93           Mean   :13.72       
-##  3rd Qu.: 81.04          3rd Qu.: 99.55           3rd Qu.:19.00       
-##  Max.   :256.48          Max.   :273.59           Max.   :58.00       
-##  NA&#39;s   :19216           NA&#39;s   :19216                                
-##  var_accel_dumbbell avg_roll_dumbbell stddev_roll_dumbbell var_roll_dumbbell 
-##  Min.   :  0.000    Min.   :-128.96   Min.   :  0.000      Min.   :    0.00  
-##  1st Qu.:  0.378    1st Qu.: -12.33   1st Qu.:  4.639      1st Qu.:   21.52  
-##  Median :  1.000    Median :  48.23   Median : 12.204      Median :  148.95  
-##  Mean   :  4.388    Mean   :  23.86   Mean   : 20.761      Mean   : 1020.27  
-##  3rd Qu.:  3.434    3rd Qu.:  64.37   3rd Qu.: 26.356      3rd Qu.:  694.65  
-##  Max.   :230.428    Max.   : 125.99   Max.   :123.778      Max.   :15321.01  
-##  NA&#39;s   :19216      NA&#39;s   :19216     NA&#39;s   :19216        NA&#39;s   :19216     
-##  avg_pitch_dumbbell stddev_pitch_dumbbell var_pitch_dumbbell avg_yaw_dumbbell  
-##  Min.   :-70.73     Min.   : 0.000        Min.   :   0.00    Min.   :-117.950  
-##  1st Qu.:-42.00     1st Qu.: 3.482        1st Qu.:  12.12    1st Qu.: -76.696  
-##  Median :-19.91     Median : 8.089        Median :  65.44    Median :  -4.505  
-##  Mean   :-12.33     Mean   :13.147        Mean   : 350.31    Mean   :   0.202  
-##  3rd Qu.: 13.21     3rd Qu.:19.238        3rd Qu.: 370.11    3rd Qu.:  71.234  
-##  Max.   : 94.28     Max.   :82.680        Max.   :6836.02    Max.   : 134.905  
-##  NA&#39;s   :19216      NA&#39;s   :19216         NA&#39;s   :19216      NA&#39;s   :19216     
-##  stddev_yaw_dumbbell var_yaw_dumbbell   gyros_dumbbell_x    gyros_dumbbell_y  
-##  Min.   :  0.000     Min.   :    0.00   Min.   :-204.0000   Min.   :-2.10000  
-##  1st Qu.:  3.885     1st Qu.:   15.09   1st Qu.:  -0.0300   1st Qu.:-0.14000  
-##  Median : 10.264     Median :  105.35   Median :   0.1300   Median : 0.03000  
-##  Mean   : 16.647     Mean   :  589.84   Mean   :   0.1611   Mean   : 0.04606  
-##  3rd Qu.: 24.674     3rd Qu.:  608.79   3rd Qu.:   0.3500   3rd Qu.: 0.21000  
-##  Max.   :107.088     Max.   :11467.91   Max.   :   2.2200   Max.   :52.00000  
-##  NA&#39;s   :19216       NA&#39;s   :19216                                            
-##  gyros_dumbbell_z  accel_dumbbell_x  accel_dumbbell_y  accel_dumbbell_z 
-##  Min.   : -2.380   Min.   :-419.00   Min.   :-189.00   Min.   :-334.00  
-##  1st Qu.: -0.310   1st Qu.: -50.00   1st Qu.:  -8.00   1st Qu.:-142.00  
-##  Median : -0.130   Median :  -8.00   Median :  41.50   Median :  -1.00  
-##  Mean   : -0.129   Mean   : -28.62   Mean   :  52.63   Mean   : -38.32  
-##  3rd Qu.:  0.030   3rd Qu.:  11.00   3rd Qu.: 111.00   3rd Qu.:  38.00  
-##  Max.   :317.000   Max.   : 235.00   Max.   : 315.00   Max.   : 318.00  
-##                                                                         
-##  magnet_dumbbell_x magnet_dumbbell_y magnet_dumbbell_z  roll_forearm      
-##  Min.   :-643.0    Min.   :-3600     Min.   :-262.00   Min.   :-180.0000  
-##  1st Qu.:-535.0    1st Qu.:  231     1st Qu.: -45.00   1st Qu.:  -0.7375  
-##  Median :-479.0    Median :  311     Median :  13.00   Median :  21.7000  
-##  Mean   :-328.5    Mean   :  221     Mean   :  46.05   Mean   :  33.8265  
-##  3rd Qu.:-304.0    3rd Qu.:  390     3rd Qu.:  95.00   3rd Qu.: 140.0000  
-##  Max.   : 592.0    Max.   :  633     Max.   : 452.00   Max.   : 180.0000  
-##                                                                           
-##  pitch_forearm     yaw_forearm      max_picth_forearm min_pitch_forearm
-##  Min.   :-72.50   Min.   :-180.00   Min.   :-151.00   Min.   :-180.00  
-##  1st Qu.:  0.00   1st Qu.: -68.60   1st Qu.:   0.00   1st Qu.:-175.00  
-##  Median :  9.24   Median :   0.00   Median : 113.00   Median : -61.00  
-##  Mean   : 10.71   Mean   :  19.21   Mean   :  81.49   Mean   : -57.57  
-##  3rd Qu.: 28.40   3rd Qu.: 110.00   3rd Qu.: 174.75   3rd Qu.:   0.00  
-##  Max.   : 89.80   Max.   : 180.00   Max.   : 180.00   Max.   : 167.00  
-##                                     NA&#39;s   :19216     NA&#39;s   :19216    
-##  amplitude_pitch_forearm total_accel_forearm var_accel_forearm
-##  Min.   :  0.0           Min.   :  0.00      Min.   :  0.000  
-##  1st Qu.:  2.0           1st Qu.: 29.00      1st Qu.:  6.759  
-##  Median : 83.7           Median : 36.00      Median : 21.165  
-##  Mean   :139.1           Mean   : 34.72      Mean   : 33.502  
-##  3rd Qu.:350.0           3rd Qu.: 41.00      3rd Qu.: 51.240  
-##  Max.   :360.0           Max.   :108.00      Max.   :172.606  
-##  NA&#39;s   :19216                               NA&#39;s   :19216    
-##  gyros_forearm_x   gyros_forearm_y     gyros_forearm_z    accel_forearm_x  
-##  Min.   :-22.000   Min.   : -7.02000   Min.   : -8.0900   Min.   :-498.00  
-##  1st Qu.: -0.220   1st Qu.: -1.46000   1st Qu.: -0.1800   1st Qu.:-178.00  
-##  Median :  0.050   Median :  0.03000   Median :  0.0800   Median : -57.00  
-##  Mean   :  0.158   Mean   :  0.07517   Mean   :  0.1512   Mean   : -61.65  
-##  3rd Qu.:  0.560   3rd Qu.:  1.62000   3rd Qu.:  0.4900   3rd Qu.:  76.00  
-##  Max.   :  3.970   Max.   :311.00000   Max.   :231.0000   Max.   : 477.00  
-##                                                                            
-##  accel_forearm_y  accel_forearm_z   magnet_forearm_x  magnet_forearm_y
-##  Min.   :-632.0   Min.   :-446.00   Min.   :-1280.0   Min.   :-896.0  
-##  1st Qu.:  57.0   1st Qu.:-182.00   1st Qu.: -616.0   1st Qu.:   2.0  
-##  Median : 201.0   Median : -39.00   Median : -378.0   Median : 591.0  
-##  Mean   : 163.7   Mean   : -55.29   Mean   : -312.6   Mean   : 380.1  
-##  3rd Qu.: 312.0   3rd Qu.:  26.00   3rd Qu.:  -73.0   3rd Qu.: 737.0  
-##  Max.   : 923.0   Max.   : 291.00   Max.   :  672.0   Max.   :1480.0  
-##                                                                       
-##  magnet_forearm_z    classe         
-##  Min.   :-973.0   Length:19622      
-##  1st Qu.: 191.0   Class :character  
-##  Median : 511.0   Mode  :character  
-##  Mean   : 393.6                     
-##  3rd Qu.: 653.0                     
-##  Max.   :1090.0                     
-## </code></pre>
-<pre class="r"><code># determining columns with more than 19000 NAs and dropping those columns
+# summary(workingTrain) --&gt; long display, many columns with 19216 NAs
+
+# determining columns with more than 19000 NAs and dropping those columns
 na_col_indexes &lt;- which(colSums(is.na(workingTrain))&gt;19000)
 workingTrain &lt;- workingTrain[,-na_col_indexes]
 
@@ -638,9 +431,8 @@ individually, combined these predictions into a data set
 <strong>predT_combined</strong>, and predicted on this data set as well
 using the combined model <strong>comb_fit</strong>.
 <strong>predT_combined</strong> are the predictions of 20 different test
-cases using the prediction model. I presume the out of sampling error to
-be the least or minimum if not zero. Below is the code for the entire
-model training section.</p>
+cases using the prediction model. Out of sample error could be anything.
+Below is the code for the entire model training section.</p>
 <pre class="r"><code>set.seed(123)
 intrain &lt;- createDataPartition(y=workingTrain$classe, p = 0.75, list = FALSE)
 train &lt;- workingTrain[intrain,]
@@ -766,7 +558,11 @@ confusionMatrix(pred1, factor(validate$classe))</code></pre>
 <pre class="r"><code>predT1 &lt;- predict(model1, workingTest)
 predT2 &lt;- predict(model2, workingTest)
 predT_combined &lt;- data.frame(predV1 = predT1, predV2 = predT2)
-combT_pred &lt;- predict(comb_fit, predT_combined)</code></pre>
+combT_pred &lt;- predict(comb_fit, predT_combined)
+# Prediction of the 20 different test cases using the prediction model
+combT_pred</code></pre>
+<pre><code>##  [1] A A A A A A A A A A A A A A A A A A A A
+## Levels: A B C D E</code></pre>
 </div>
 
 

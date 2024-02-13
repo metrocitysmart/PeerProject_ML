@@ -28,80 +28,70 @@ download.file(testUrl, testFilename)
 
 After downloading train and test files, read the files and loaded the datasets
 into the workspace. Training data set has 19622 observations and 160 variables,
-while the testing dataset has 20 observations and 160 variables.  
+while the testing dataset has 20 observations and 160 variables. The training and testing data sets have a lot of NA values, empty strings and "#DIV/0!" character string as column values. Hence to treat all these as NAs re-read the file by providing **na.strings** values.
 
 ```{r, reading_datasets}
-training <- read.csv(trainFilename)
+training <- read.csv(trainFilename, na.strings = c("NA", "", "#DIV/0!"))
+testing <- read.csv(testFilename, na.strings = c("NA", "", "#DIV/0!"))
 dim(training)
-testing <- read.csv(testFilename)
 dim(testing)
 ```
 
 ## Pre-Process  
 
-To determine which columns had no variation in values so that those columns
-could be dropped, I loaded **caret** package for this purpose and used the
-function **nzv**. I obtained the column indexes for which there was no variation in values. Using the column indexes I dropped those columns.
-Next summarizing with summary function showed many columns with more than 
-nineteen thousand NAs. Decided to drop all variables with more than nineteen thousand NAs from the data set resulting from after dropping columns with zero variation operation.  
+To determine which columns had NA values so that those columns
+could be dropped, I obtained the column indexes for these columns. I dropped those columns. Further the first seven columns user names, column **X**, date and time and window id make no impact on class prediction hence, these columns also were dropped. All those columns that I dropped from training set I dropped them from **testing** set also to keep the training and testing sets similar.
 
 ```{r, noVariation_NAs}
-# columns indexes with zero variation and dropping those columns
-library(caret)
-noVariation_col_indexes <- nzv(as.matrix(training))
-workingTrain <- training[,-noVariation_col_indexes]
-# summary(workingTrain) --> long display, many columns with 19216 NAs
+# columns indexes with NAs and dropping those columns
+col_inds <- which(colSums(is.na(training))==0)
 
-# determining columns with more than 19000 NAs and dropping those columns
-na_col_indexes <- which(colSums(is.na(workingTrain))>19000)
-workingTrain <- workingTrain[,-na_col_indexes]
+workingTrain <- training[,col_inds]
+# The first seven columns also have no impact on 
+workingTrain <- workingTrain[,-c(1:7)]
 
 # In order to keep the test set similar to the training set, dropped all those
 # columns which were dropped from the training set.  
-
-workingTest <- testing[,-noVariation_col_indexes]
-workingTest <- workingTest[,-na_col_indexes]
+workingTest <- testing[ , col_inds]
+workingTest <- workingTest[, -c(1:7)]
 ```
 
 ## Model training  
-From the data sets obtained after pre-processing above, I worked with the
-**caret** package created **train** and **validate** data sets. Used model stacking technique, with random forest and rpart classification models. In random forest I used repeated cross validation with 2 repeats of 3-fold cross validation for resampling. For **rpart** model, I used 4-fold cross validation as the resampling method. Also used **tuneLength** parameter for tuning.
-The random forest model took 5-6 minutes to run on my laptop. I took predictions on both the models, combined with **classe** variable of the **validate** set to create a new data set **pred_df**. Trained on this data set and predicted on this set. Both the individual models have an accuracy of one, and the stacked model using **gbm** also has accuracy one.
-I further took predictions on **workingTest** data set for both the models individually, combined these predictions into a data set **predT_combined**, and predicted on this data set as well using the combined model **comb_fit**. **predT_combined** are the predictions of 20 different test cases using the prediction model.
-Out of sample error could be anything. Below is the code for the entire model training section.
+From the data sets obtained after pre-processing above, I created **train** and **validate** sets from *training* set, using **createDataPartition** from **caret** package. I choose random forest (**rf**) and **rpart** from caret package for training models for classification. For random forest I used 5-fold cross validation and obtained an overall accuracy of *0.995*. For **rpart** model used 10-fold cross validation and obtained a overall accuracy of **0.5**.
+Out of sample errors for random forest and rpart models obtained by subtracting from 1 the overall accuracy and then multiplying the resulting number with 100, are *0.5%* and *50.0%* respectively. Hence used the random forest model for 20-sample test prediction. Below is the code for the entire model training section.
 
 ```{r, model_training}
+library(caret)
+
 set.seed(123)
 intrain <- createDataPartition(y=workingTrain$classe, p = 0.75, list = FALSE)
 train <- workingTrain[intrain,]
 validate <- workingTrain[-intrain,]
+train$classe <- factor(train$classe)
+validate$classe <- factor(validate$classe)
 
-ctrl <- trainControl(method = "repeatedcv", number = 3, repeats = 2)
-
-model1 <- train(classe ~ ., method = "rf", data = train, 
-                tuneLength = 5, trControl = ctrl)
-
-rpart_ctrl <- trainControl(method = "cv", number = 4)
-model2 <- train(classe ~ ., method = "rpart", data = train,
-                tuneLength = 5, trControl = ctrl)
-
+# rf model and trainControl
+ctrl <- trainControl(method = "cv", number = 5)
+set.seed(235)
+model1 <- train(classe ~ ., method = "rf", data = train, trControl = ctrl)
 pred1 <- predict(model1, validate)
+confusionMatrix(pred1, validate$classe)
+
+# rpart model
+ctrl_rpart <- trainControl(method = "cv", number = 10)
+set.seed(385)
+model2 <- train(classe ~ ., method = "rpart", data = train, trControl = ctrl_rpart)
 pred2 <- predict(model2, validate)
+confusionMatrix(pred2, validate$classe)
 
-pred_df <- data.frame(predV1 = pred1, predV2 = pred2, classe = validate$classe)
-comb_fit <- train(classe ~ ., method = "gbm", data = pred_df, verbose = FALSE)
+# Testing errors
+oose <- (1 - confusionMatrix(pred1, validate$classe)$overall[1]) * 100
+oose_rpart <- (1 - confusionMatrix(pred2, validate$classe)$overall[1]) * 100
 
-predCombined <- predict(comb_fit, pred_df)
-
-# Errors on validate set
-confusionMatrix(pred1, factor(validate$classe))
-confusionMatrix(pred2, factor(validate$classe))
-confusionMatrix(predCombined, factor(validate$classe))
-
+# Prediction of the 20 different test cases using the rf model
 predT1 <- predict(model1, workingTest)
-predT2 <- predict(model2, workingTest)
-predT_combined <- data.frame(predV1 = predT1, predV2 = predT2)
-combT_pred <- predict(comb_fit, predT_combined)
-# Prediction of the 20 different test cases using the prediction model
-combT_pred
+predT1
 ```
+
+## conclusion  
+Used **random forest (rf)** from caret package to train the model, used 5-fold cross validation, obtained 0.5% out of sample error and predicted the 20-sample test from this model.

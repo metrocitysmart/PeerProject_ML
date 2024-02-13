@@ -375,194 +375,155 @@ download.file(testUrl, testFilename)</code></pre>
 <p>After downloading train and test files, read the files and loaded the
 datasets into the workspace. Training data set has 19622 observations
 and 160 variables, while the testing dataset has 20 observations and 160
-variables.</p>
-<pre class="r"><code>training &lt;- read.csv(trainFilename)
+variables. The training and testing data sets have a lot of NA values,
+empty strings and “#DIV/0!” character string as column values. Hence to
+treat all these as NAs re-read the file by providing
+<strong>na.strings</strong> values.</p>
+<pre class="r"><code>training &lt;- read.csv(trainFilename, na.strings = c(&quot;NA&quot;, &quot;&quot;, &quot;#DIV/0!&quot;))
+testing &lt;- read.csv(testFilename, na.strings = c(&quot;NA&quot;, &quot;&quot;, &quot;#DIV/0!&quot;))
 dim(training)</code></pre>
 <pre><code>## [1] 19622   160</code></pre>
-<pre class="r"><code>testing &lt;- read.csv(testFilename)
-dim(testing)</code></pre>
+<pre class="r"><code>dim(testing)</code></pre>
 <pre><code>## [1]  20 160</code></pre>
 </div>
 <div id="pre-process" class="section level2">
 <h2>Pre-Process</h2>
-<p>To determine which columns had no variation in values so that those
-columns could be dropped, I loaded <strong>caret</strong> package for
-this purpose and used the function <strong>nzv</strong>. I obtained the
-column indexes for which there was no variation in values. Using the
-column indexes I dropped those columns. Next summarizing with summary
-function showed many columns with more than nineteen thousand NAs.
-Decided to drop all variables with more than nineteen thousand NAs from
-the data set resulting from after dropping columns with zero variation
-operation.</p>
-<pre class="r"><code># columns indexes with zero variation and dropping those columns
-library(caret)
-noVariation_col_indexes &lt;- nzv(as.matrix(training))
-workingTrain &lt;- training[,-noVariation_col_indexes]
-# summary(workingTrain) --&gt; long display, many columns with 19216 NAs
+<p>To determine which columns had NA values so that those columns could
+be dropped, I obtained the column indexes for these columns. I dropped
+those columns. Further the first seven columns user names, column
+<strong>X</strong>, date and time and window id make no impact on class
+prediction hence, these columns also were dropped. All those columns
+that I dropped from training set I dropped them from
+<strong>testing</strong> set also to keep the training and testing sets
+similar.</p>
+<pre class="r"><code># columns indexes with NAs and dropping those columns
+col_inds &lt;- which(colSums(is.na(training))==0)
 
-# determining columns with more than 19000 NAs and dropping those columns
-na_col_indexes &lt;- which(colSums(is.na(workingTrain))&gt;19000)
-workingTrain &lt;- workingTrain[,-na_col_indexes]
+workingTrain &lt;- training[,col_inds]
+# The first seven columns also have no impact on 
+workingTrain &lt;- workingTrain[,-c(1:7)]
 
 # In order to keep the test set similar to the training set, dropped all those
 # columns which were dropped from the training set.  
-
-workingTest &lt;- testing[,-noVariation_col_indexes]
-workingTest &lt;- workingTest[,-na_col_indexes]</code></pre>
+workingTest &lt;- testing[ , col_inds]
+workingTest &lt;- workingTest[, -c(1:7)]</code></pre>
 </div>
 <div id="model-training" class="section level2">
 <h2>Model training</h2>
-<p>From the data sets obtained after pre-processing above, I worked with
-the <strong>caret</strong> package created <strong>train</strong> and
-<strong>validate</strong> data sets. Used model stacking technique, with
-random forest and rpart classification models. In random forest I used
-repeated cross validation with 2 repeats of 3-fold cross validation for
-resampling. For <strong>rpart</strong> model, I used 4-fold cross
-validation as the resampling method. Also used
-<strong>tuneLength</strong> parameter for tuning. The random forest
-model took 5-6 minutes to run on my laptop. I took predictions on both
-the models, combined with <strong>classe</strong> variable of the
-<strong>validate</strong> set to create a new data set
-<strong>pred_df</strong>. Trained on this data set and predicted on this
-set. Both the individual models have an accuracy of one, and the stacked
-model using <strong>gbm</strong> also has accuracy one. I further took
-predictions on <strong>workingTest</strong> data set for both the models
-individually, combined these predictions into a data set
-<strong>predT_combined</strong>, and predicted on this data set as well
-using the combined model <strong>comb_fit</strong>.
-<strong>predT_combined</strong> are the predictions of 20 different test
-cases using the prediction model. Out of sample error could be anything.
-Below is the code for the entire model training section.</p>
-<pre class="r"><code>set.seed(123)
+<p>From the data sets obtained after pre-processing above, I created
+<strong>train</strong> and <strong>validate</strong> sets from
+<em>training</em> set, using <strong>createDataPartition</strong> from
+<strong>caret</strong> package. I choose random forest
+(<strong>rf</strong>) and <strong>rpart</strong> from caret package for
+training models for classification. For random forest I used 5-fold
+cross validation and obtained an overall accuracy of <em>0.995</em>. For
+<strong>rpart</strong> model used 10-fold cross validation and obtained
+a overall accuracy of <strong>0.5</strong>. Out of sample errors for
+random forest and rpart models obtained by subtracting from 1 the
+overall accuracy and then multiplying the resulting number with 100, are
+<em>0.5%</em> and <em>50.0%</em> respectively. Hence used the random
+forest model for 20-sample test prediction. Below is the code for the
+entire model training section.</p>
+<pre class="r"><code>library(caret)
+
+set.seed(123)
 intrain &lt;- createDataPartition(y=workingTrain$classe, p = 0.75, list = FALSE)
 train &lt;- workingTrain[intrain,]
 validate &lt;- workingTrain[-intrain,]
+train$classe &lt;- factor(train$classe)
+validate$classe &lt;- factor(validate$classe)
 
-ctrl &lt;- trainControl(method = &quot;repeatedcv&quot;, number = 3, repeats = 2)
-
-model1 &lt;- train(classe ~ ., method = &quot;rf&quot;, data = train, 
-                tuneLength = 5, trControl = ctrl)
-
-rpart_ctrl &lt;- trainControl(method = &quot;cv&quot;, number = 4)
-model2 &lt;- train(classe ~ ., method = &quot;rpart&quot;, data = train,
-                tuneLength = 5, trControl = ctrl)
-
+# rf model and trainControl
+ctrl &lt;- trainControl(method = &quot;cv&quot;, number = 5)
+set.seed(235)
+model1 &lt;- train(classe ~ ., method = &quot;rf&quot;, data = train, trControl = ctrl)
 pred1 &lt;- predict(model1, validate)
+confusionMatrix(pred1, validate$classe)</code></pre>
+<pre><code>## Confusion Matrix and Statistics
+## 
+##           Reference
+## Prediction    A    B    C    D    E
+##          A 1395    4    0    0    0
+##          B    0  944    7    0    0
+##          C    0    1  845    7    3
+##          D    0    0    3  797    1
+##          E    0    0    0    0  897
+## 
+## Overall Statistics
+##                                           
+##                Accuracy : 0.9947          
+##                  95% CI : (0.9922, 0.9965)
+##     No Information Rate : 0.2845          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9933          
+##                                           
+##  Mcnemar&#39;s Test P-Value : NA              
+## 
+## Statistics by Class:
+## 
+##                      Class: A Class: B Class: C Class: D Class: E
+## Sensitivity            1.0000   0.9947   0.9883   0.9913   0.9956
+## Specificity            0.9989   0.9982   0.9973   0.9990   1.0000
+## Pos Pred Value         0.9971   0.9926   0.9871   0.9950   1.0000
+## Neg Pred Value         1.0000   0.9987   0.9975   0.9983   0.9990
+## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+## Detection Rate         0.2845   0.1925   0.1723   0.1625   0.1829
+## Detection Prevalence   0.2853   0.1939   0.1746   0.1633   0.1829
+## Balanced Accuracy      0.9994   0.9965   0.9928   0.9952   0.9978</code></pre>
+<pre class="r"><code># rpart model
+ctrl_rpart &lt;- trainControl(method = &quot;cv&quot;, number = 10)
+set.seed(385)
+model2 &lt;- train(classe ~ ., method = &quot;rpart&quot;, data = train, trControl = ctrl_rpart)
 pred2 &lt;- predict(model2, validate)
-
-pred_df &lt;- data.frame(predV1 = pred1, predV2 = pred2, classe = validate$classe)
-comb_fit &lt;- train(classe ~ ., method = &quot;gbm&quot;, data = pred_df, verbose = FALSE)
-
-predCombined &lt;- predict(comb_fit, pred_df)
-
-# Errors on validate set
-confusionMatrix(pred1, factor(validate$classe))</code></pre>
+confusionMatrix(pred2, validate$classe)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1395    0    0    0    0
-##          B    0  949    0    0    0
-##          C    0    0  855    0    0
-##          D    0    0    0  804    0
-##          E    0    0    0    0  901
+##          A 1271  384  380  349  127
+##          B   23  320   23  135  116
+##          C  100  245  452  320  251
+##          D    0    0    0    0    0
+##          E    1    0    0    0  407
 ## 
 ## Overall Statistics
-##                                      
-##                Accuracy : 1          
-##                  95% CI : (0.9992, 1)
-##     No Information Rate : 0.2845     
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
-##                                      
-##                   Kappa : 1          
-##                                      
-##  Mcnemar&#39;s Test P-Value : NA         
+##                                           
+##                Accuracy : 0.4996          
+##                  95% CI : (0.4855, 0.5137)
+##     No Information Rate : 0.2845          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.3468          
+##                                           
+##  Mcnemar&#39;s Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Specificity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Pos Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
-## Neg Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
-## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
-## Detection Rate         0.2845   0.1935   0.1743   0.1639   0.1837
-## Detection Prevalence   0.2845   0.1935   0.1743   0.1639   0.1837
-## Balanced Accuracy      1.0000   1.0000   1.0000   1.0000   1.0000</code></pre>
-<pre class="r"><code>confusionMatrix(pred2, factor(validate$classe))</code></pre>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    A    B    C    D    E
-##          A 1395    0    0    0    0
-##          B    0  949    0    0    0
-##          C    0    0  855    0    0
-##          D    0    0    0  804    0
-##          E    0    0    0    0  901
-## 
-## Overall Statistics
-##                                      
-##                Accuracy : 1          
-##                  95% CI : (0.9992, 1)
-##     No Information Rate : 0.2845     
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
-##                                      
-##                   Kappa : 1          
-##                                      
-##  Mcnemar&#39;s Test P-Value : NA         
-## 
-## Statistics by Class:
-## 
-##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Specificity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Pos Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
-## Neg Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
-## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
-## Detection Rate         0.2845   0.1935   0.1743   0.1639   0.1837
-## Detection Prevalence   0.2845   0.1935   0.1743   0.1639   0.1837
-## Balanced Accuracy      1.0000   1.0000   1.0000   1.0000   1.0000</code></pre>
-<pre class="r"><code>confusionMatrix(predCombined, factor(validate$classe))</code></pre>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    A    B    C    D    E
-##          A 1395    0    0    0    0
-##          B    0  949    0    0    0
-##          C    0    0  855    0    0
-##          D    0    0    0  804    0
-##          E    0    0    0    0  901
-## 
-## Overall Statistics
-##                                      
-##                Accuracy : 1          
-##                  95% CI : (0.9992, 1)
-##     No Information Rate : 0.2845     
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
-##                                      
-##                   Kappa : 1          
-##                                      
-##  Mcnemar&#39;s Test P-Value : NA         
-## 
-## Statistics by Class:
-## 
-##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Specificity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Pos Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
-## Neg Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
-## Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
-## Detection Rate         0.2845   0.1935   0.1743   0.1639   0.1837
-## Detection Prevalence   0.2845   0.1935   0.1743   0.1639   0.1837
-## Balanced Accuracy      1.0000   1.0000   1.0000   1.0000   1.0000</code></pre>
-<pre class="r"><code>predT1 &lt;- predict(model1, workingTest)
-predT2 &lt;- predict(model2, workingTest)
-predT_combined &lt;- data.frame(predV1 = predT1, predV2 = predT2)
-combT_pred &lt;- predict(comb_fit, predT_combined)
-# Prediction of the 20 different test cases using the prediction model
-combT_pred</code></pre>
-<pre><code>##  [1] A A A A A A A A A A A A A A A A A A A A
+## Sensitivity            0.9111  0.33720  0.52865   0.0000  0.45172
+## Specificity            0.6466  0.92491  0.77377   1.0000  0.99975
+## Pos Pred Value         0.5062  0.51864  0.33041      NaN  0.99755
+## Neg Pred Value         0.9482  0.85328  0.88603   0.8361  0.89012
+## Prevalence             0.2845  0.19352  0.17435   0.1639  0.18373
+## Detection Rate         0.2592  0.06525  0.09217   0.0000  0.08299
+## Detection Prevalence   0.5120  0.12582  0.27896   0.0000  0.08320
+## Balanced Accuracy      0.7789  0.63105  0.65121   0.5000  0.72574</code></pre>
+<pre class="r"><code># Testing errors
+oose &lt;- (1 - confusionMatrix(pred1, validate$classe)$overall[1]) * 100
+oose_rpart &lt;- (1 - confusionMatrix(pred2, validate$classe)$overall[1]) * 100
+
+# Prediction of the 20 different test cases using the rf model
+predT1 &lt;- predict(model1, workingTest)
+predT1</code></pre>
+<pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
 ## Levels: A B C D E</code></pre>
+</div>
+<div id="conclusion" class="section level2">
+<h2>conclusion</h2>
+<p>Used <strong>random forest (rf)</strong> from caret package to train
+the model, used 5-fold cross validation, obtained 0.5% out of sample
+error and predicted the 20-sample test from this model.</p>
 </div>
 
 
